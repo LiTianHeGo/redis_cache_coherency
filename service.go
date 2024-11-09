@@ -28,14 +28,13 @@ func (svc *CacheCoherencyService) HandleWriteForHotKey(ctx context.Context, key 
 
 	//3、执行写DB
 	if err := svc.MysqlServer.Update(key); err != nil {
-		svc.RedisServer.EnableWriteBack(key) //恢复读请求的回写机制
+		svc.RedisServer.EnableWriteBack(key) //写db失败，则恢复读请求的回写机制
 		return err
 	}
 
 	//4、主动回写redis
 	if err := svc.RedisServer.WriteBack(key); err != nil {
-		//若回写失败，结合rmq消息队列，保证最终回写缓存成功
-		svc.RabbitMQServer.SendMsg(key, []byte("模拟数据.."))
+		svc.RabbitMQServer.SendMsg(key, []byte("模拟数据..")) //若回写失败，结合rmq消息队列，保证最终回写缓存成功
 	}
 
 	//5、恢复该key的读请求回写机制
